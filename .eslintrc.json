@@ -6,11 +6,7 @@
     },
     "extends": [
         "eslint:recommended",
-        "plugin:jsx-a11y/recommended",
-        "plugin:security/recommended",
-        "plugin:sonarjs/recommended",
-        "plugin:react/recommended",
-        "plugin:react-perf/recommended"
+        "plugin:react/recommended"
     ],
     "ignorePatterns": ["node_modules/"],
     "rules": {
