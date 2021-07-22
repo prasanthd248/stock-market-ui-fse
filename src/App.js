@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import logo from "./logo.svg";
+import { ReactComponent as Logo } from "./logo.svg";
+import "./App.css";
 
 let allCompanyDetailsCache = [];
+let stockDetailsCache = [];
 
 const getAverage = (stockDetails) => {
     const priceList = stockDetails.map((data) => Number(data.price));
@@ -64,7 +66,7 @@ function App() {
             minDate &&
             maxDate
         ) {
-            const filteredStocks = stockDetails.filter((stock) => {
+            const filteredStocks = stockDetailsCache.filter((stock) => {
                 const stockDate = new Date(getFormattedDate(stock.date));
                 const minDateObj = new Date(getFormattedDate(minDate));
                 const maxDateObj = new Date(getFormattedDate(maxDate));
@@ -94,6 +96,7 @@ function App() {
                 .then((response) => response.json())
                 .then((data) => {
                     setStockDetails(data);
+                    stockDetailsCache = data;
                 })
                 .catch((error) => {
                     console.error("Error:", error);
@@ -102,129 +105,195 @@ function App() {
     }, [allCompanyDetails, selectedValue]);
 
     return (
-        <div>
-            <div>
-                <img src={logo} alt="company log" width="55px" height="55px" />
+        <>
+            <header>
+                <div className="stock-header-section">
+                    <div className="stock-main-container stock-header-footer-section-content">
+                        <div className="stock-logo-section">
+                            <Logo width="50px" height="50px" />
+                            <span className="stock-header-text">
+                                Stock Dashboard
+                            </span>
+                        </div>
 
-                <select onChange={onSelectChange}>
-                    <option value="default">please select company</option>
-                    {allCompanyDetails.map((data, index) => {
-                        return (
-                            <option key={data.companyCode} value={index}>
-                                {data.companyName}
-                            </option>
-                        );
-                    })}
-                </select>
-
-                <input type="text" ref={searchInputRef} />
-                <button type="button" onClick={onSearchClick}>
-                    Search
-                </button>
-            </div>
-            <div>
-                <p>
-                    Company Code:{" "}
-                    <span>
-                        {selectedValue === "default"
-                            ? ""
-                            : `${allCompanyDetails[selectedValue].companyCode}`}
-                    </span>{" "}
-                </p>
-                <p>
-                    Company Name:{" "}
-                    <span>
-                        {selectedValue === "default"
-                            ? ""
-                            : `${allCompanyDetails[selectedValue].companyName}`}
-                    </span>{" "}
-                </p>
-            </div>
-            <div>
-                <label htmlFor="fromDateId">From: </label>
-                <input
-                    type="date"
-                    id="fromDateId"
-                    value={minDate}
-                    onChange={onMinDateChange}
-                />
-                <label htmlFor="toDateId">To: </label>
-                <input
-                    type="date"
-                    id="toDateId"
-                    min={minDate}
-                    value={maxDate}
-                    onChange={onMaxDateChange}
-                />
-                <button
-                    disabled={!(minDate && maxDate)}
-                    type="button"
-                    onClick={onFilterClick}
-                >
-                    Filter Stocks
-                </button>
-            </div>
-            {selectedValue !== "default" && !!stockDetails.length ? (
-                <>
-                    <div>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Stock Price</th>
-                                    <th>Date(MM/DD/YYYY)</th>
-                                    <th>Time(HH:MM)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {selectedValue !== "default" &&
-                                    stockDetails.map((data, index) => {
+                        <div className="stock-search">
+                            <input type="text" ref={searchInputRef} />
+                            <button
+                                className="stock-btn"
+                                type="button"
+                                onClick={onSearchClick}
+                            >
+                                Search
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <main>
+                <div className="stock-main-container">
+                    <div className="stock-details-section">
+                        <fieldset>
+                            <legend>Company Details</legend>
+                            <label htmlFor="company-details">
+                                Select a company:{" "}
+                                <select
+                                    id="company-details"
+                                    onChange={onSelectChange}
+                                >
+                                    <option value="default">
+                                        Please select company
+                                    </option>
+                                    {allCompanyDetails.map((data, index) => {
                                         return (
-                                            <tr key={index.toString()}>
-                                                <td>{data.price}</td>
-                                                <td>
-                                                    {getFormattedDate(
-                                                        data.date
-                                                    )}
-                                                </td>
-                                                <td>
-                                                    {getFormattedTime(
-                                                        data.date
+                                            <option
+                                                key={data.companyCode}
+                                                value={index}
+                                            >
+                                                {data.companyName}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            </label>
+                            <div>
+                                <p>
+                                    Company Code:{" "}
+                                    <span>
+                                        {selectedValue === "default"
+                                            ? ""
+                                            : `${allCompanyDetails[selectedValue].companyCode}`}
+                                    </span>{" "}
+                                </p>
+                                <p>
+                                    Company Name:{" "}
+                                    <span>
+                                        {selectedValue === "default"
+                                            ? ""
+                                            : `${allCompanyDetails[selectedValue].companyName}`}
+                                    </span>{" "}
+                                </p>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div className="stock-details-section">
+                        <fieldset>
+                            <legend>Date Filter</legend>
+                            <label htmlFor="fromDateId">From: </label>
+                            <input
+                                type="date"
+                                id="fromDateId"
+                                value={minDate}
+                                onChange={onMinDateChange}
+                            />
+                            <label htmlFor="toDateId">To: </label>
+                            <input
+                                type="date"
+                                id="toDateId"
+                                min={minDate}
+                                value={maxDate}
+                                onChange={onMaxDateChange}
+                            />
+                            <button
+                                disabled={!(minDate && maxDate)}
+                                type="button"
+                                onClick={onFilterClick}
+                                className="stock-btn-1"
+                            >
+                                Filter Stocks
+                            </button>
+                        </fieldset>
+                    </div>
+                    <div className="stock-details-section">
+                        <fieldset>
+                            <legend>Stock Details</legend>
+                            {selectedValue !== "default" &&
+                            !!stockDetails.length ? (
+                                <div>
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>Stock Price</th>
+                                                <th>Date(MM/DD/YYYY)</th>
+                                                <th>Time(HH:MM)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedValue !== "default" &&
+                                                stockDetails.map(
+                                                    (data, index) => {
+                                                        return (
+                                                            <tr
+                                                                key={index.toString()}
+                                                            >
+                                                                <td>
+                                                                    {data.price}
+                                                                </td>
+                                                                <td>
+                                                                    {getFormattedDate(
+                                                                        data.date
+                                                                    )}
+                                                                </td>
+                                                                <td>
+                                                                    {getFormattedTime(
+                                                                        data.date
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    }
+                                                )}
+                                        </tbody>
+                                        <tfoot>
+                                            <tr>
+                                                <th scope="row" colSpan="1">
+                                                    MIN:
+                                                </th>
+                                                <td colSpan="1">
+                                                    {Math.min.apply(
+                                                        null,
+                                                        stockDetails.map(
+                                                            (item) => item.price
+                                                        )
                                                     )}
                                                 </td>
                                             </tr>
-                                        );
-                                    })}
-                            </tbody>
-                        </table>
+                                            <tr>
+                                                <th scope="row" colSpan="1">
+                                                    MAX:
+                                                </th>
+                                                <td colSpan="1">
+                                                    {Math.max.apply(
+                                                        null,
+                                                        stockDetails.map(
+                                                            (item) => item.price
+                                                        )
+                                                    )}
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <th scope="row" colSpan="1">
+                                                    AVG:
+                                                </th>
+                                                <td colSpan="1">
+                                                    {getAverage(stockDetails)}
+                                                </td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div>No stocks data available!</div>
+                            )}
+                        </fieldset>
                     </div>
-                    <div>
-                        <p>
-                            MIN:{" "}
-                            <span>
-                                {Math.min.apply(
-                                    null,
-                                    stockDetails.map((item) => item.price)
-                                )}
-                            </span>
-                        </p>
-                        <p>
-                            MAX:{" "}
-                            <span>
-                                {Math.max.apply(
-                                    null,
-                                    stockDetails.map((item) => item.price)
-                                )}
-                            </span>
-                        </p>
-                        <p>
-                            AVG: <span>{getAverage(stockDetails)}</span>
-                        </p>
-                    </div>
-                </>
-            ) : (
-                <div>No stocks data available!</div>
-            )}
-        </div>
+                </div>
+            </main>
+            <footer>
+                <div className="stock-footer-section">
+                    <div className="stock-main-container stock-header-footer-section-content"></div>
+                </div>
+            </footer>
+        </>
     );
 }
 
