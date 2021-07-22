@@ -1,50 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import logo from "./logo.svg";
 
-const mock = [
-    {
-        companyCode: "001",
-        companyName: "Tata consultancy",
-        stockDetails: [
-            {
-                price: 100,
-                date: "07/06/2021",
-                time: "10.10",
-            },
-            {
-                price: 101,
-                date: "07/05/2021",
-                time: "10.10",
-            },
-            {
-                price: 102,
-                date: "07/05/2021",
-                time: "10.10",
-            },
-        ],
-    },
-    {
-        companyCode: "002",
-        companyName: "CTS",
-        stockDetails: [
-            {
-                price: 55,
-                date: "06/06/2021",
-                time: "10.10",
-            },
-            {
-                price: 56,
-                date: "06/05/2021",
-                time: "10.10",
-            },
-            {
-                price: 57,
-                date: "06/05/2021",
-                time: "10.10",
-            },
-        ],
-    },
-];
+let allCompanyDetailsCache = [];
 
 const getAverage = (stockDetails) => {
     const priceList = stockDetails.map((data) => Number(data.price));
@@ -52,14 +9,97 @@ const getAverage = (stockDetails) => {
     return sum / priceList.length || 0;
 };
 
+const getFormattedDate = (datetimestamp) => {
+    return new Date(datetimestamp).toLocaleDateString();
+};
+
+const getFormattedTime = (datetimestamp) => {
+    return new Date(datetimestamp).toLocaleTimeString(navigator.language, {
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
 function App() {
     const [selectedValue, setSelectedValue] = useState("default");
-    console.log("selectedValue:", selectedValue);
+    const [allCompanyDetails, setAllCompanyDetails] = useState([]);
+    const [stockDetails, setStockDetails] = useState([]);
+    const [minDate, setMinDate] = useState("");
+    const [maxDate, setMaxDate] = useState("");
 
-    const onSelectChange = (params) => {
-        console.log("changed", params.target.value);
-        setSelectedValue(params.target.value);
+    const searchInputRef = useRef(null);
+
+    const onSelectChange = (e) => {
+        setSelectedValue(e.target.value);
+        setMinDate("");
+        setMaxDate("");
     };
+
+    const onSearchClick = () => {
+        const searchValue = searchInputRef.current.value;
+        const searchIndex = allCompanyDetailsCache.findIndex(
+            (eachCompany) =>
+                eachCompany.companyCode.toLowerCase() ===
+                searchValue.toLowerCase()
+        );
+        if (searchIndex !== -1) {
+            setSelectedValue(searchIndex);
+            setMinDate("");
+            setMaxDate("");
+        }
+    };
+
+    const onMinDateChange = (e) => {
+        setMinDate(e.target.value);
+    };
+
+    const onMaxDateChange = (e) => {
+        setMaxDate(e.target.value);
+    };
+
+    const onFilterClick = () => {
+        if (
+            selectedValue !== "default" &&
+            !!stockDetails.length &&
+            minDate &&
+            maxDate
+        ) {
+            const filteredStocks = stockDetails.filter((stock) => {
+                const stockDate = new Date(getFormattedDate(stock.date));
+                const minDateObj = new Date(getFormattedDate(minDate));
+                const maxDateObj = new Date(getFormattedDate(maxDate));
+                return stockDate >= minDateObj && stockDate <= maxDateObj;
+            });
+            setStockDetails(filteredStocks);
+        }
+    };
+
+    useEffect(() => {
+        fetch("http://3.108.217.203:8080/api/v1.0/market/company/getall")
+            .then((response) => response.json())
+            .then((data) => {
+                setAllCompanyDetails(data);
+                allCompanyDetailsCache = data;
+            })
+            .catch((error) => {
+                console.error("Error:", error);
+            });
+    }, []);
+
+    useEffect(() => {
+        if (selectedValue !== "default") {
+            fetch(
+                `http://3.108.217.203:8080/api/v1.0/market/stock/infoStock?companyCode=${allCompanyDetails[selectedValue].companyCode}`
+            )
+                .then((response) => response.json())
+                .then((data) => {
+                    setStockDetails(data);
+                })
+                .catch((error) => {
+                    console.error("Error:", error);
+                });
+        }
+    }, [allCompanyDetails, selectedValue]);
 
     return (
         <div>
@@ -68,7 +108,7 @@ function App() {
 
                 <select onChange={onSelectChange}>
                     <option value="default">please select company</option>
-                    {mock.map((data, index) => {
+                    {allCompanyDetails.map((data, index) => {
                         return (
                             <option key={data.companyCode} value={index}>
                                 {data.companyName}
@@ -77,8 +117,10 @@ function App() {
                     })}
                 </select>
 
-                <input type="text" />
-                <button type="button">Search</button>
+                <input type="text" ref={searchInputRef} />
+                <button type="button" onClick={onSearchClick}>
+                    Search
+                </button>
             </div>
             <div>
                 <p>
@@ -86,7 +128,7 @@ function App() {
                     <span>
                         {selectedValue === "default"
                             ? ""
-                            : `${mock[selectedValue].companyCode}`}
+                            : `${allCompanyDetails[selectedValue].companyCode}`}
                     </span>{" "}
                 </p>
                 <p>
@@ -94,72 +136,93 @@ function App() {
                     <span>
                         {selectedValue === "default"
                             ? ""
-                            : `${mock[selectedValue].companyName}`}
+                            : `${allCompanyDetails[selectedValue].companyName}`}
                     </span>{" "}
                 </p>
             </div>
             <div>
                 <label htmlFor="fromDateId">From: </label>
-                <input type="date" id="fromDateId" />
+                <input
+                    type="date"
+                    id="fromDateId"
+                    value={minDate}
+                    onChange={onMinDateChange}
+                />
                 <label htmlFor="toDateId">To: </label>
-                <input type="date" id="toDateId" />
+                <input
+                    type="date"
+                    id="toDateId"
+                    min={minDate}
+                    value={maxDate}
+                    onChange={onMaxDateChange}
+                />
+                <button
+                    disabled={!(minDate && maxDate)}
+                    type="button"
+                    onClick={onFilterClick}
+                >
+                    Filter Stocks
+                </button>
             </div>
-            <div>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Stock Price</th>
-                            <th>Date(DD/MM/YYYY)</th>
-                            <th>Time(HH:MM)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {selectedValue !== "default" &&
-                            mock[selectedValue].stockDetails.map(
-                                (data, index) => {
-                                    return (
-                                        <tr key={index.toString()}>
-                                            <td>{data.price}</td>
-                                            <td>{data.date}</td>
-                                            <td>{data.time}</td>
-                                        </tr>
-                                    );
-                                }
-                            )}
-                    </tbody>
-                </table>
-            </div>
-            {selectedValue !== "default" && (
-                <div>
-                    <p>
-                        MIN:{" "}
-                        <span>
-                            {Math.min.apply(
-                                null,
-                                mock[selectedValue].stockDetails.map(
-                                    (item) => item.price
-                                )
-                            )}
-                        </span>
-                    </p>
-                    <p>
-                        MAX:{" "}
-                        <span>
-                            {Math.max.apply(
-                                null,
-                                mock[selectedValue].stockDetails.map(
-                                    (item) => item.price
-                                )
-                            )}
-                        </span>
-                    </p>
-                    <p>
-                        AVG:{" "}
-                        <span>
-                            {getAverage(mock[selectedValue].stockDetails)}
-                        </span>
-                    </p>
-                </div>
+            {selectedValue !== "default" && !!stockDetails.length ? (
+                <>
+                    <div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Stock Price</th>
+                                    <th>Date(MM/DD/YYYY)</th>
+                                    <th>Time(HH:MM)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {selectedValue !== "default" &&
+                                    stockDetails.map((data, index) => {
+                                        return (
+                                            <tr key={index.toString()}>
+                                                <td>{data.price}</td>
+                                                <td>
+                                                    {getFormattedDate(
+                                                        data.date
+                                                    )}
+                                                </td>
+                                                <td>
+                                                    {getFormattedTime(
+                                                        data.date
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <p>
+                            MIN:{" "}
+                            <span>
+                                {Math.min.apply(
+                                    null,
+                                    stockDetails.map((item) => item.price)
+                                )}
+                            </span>
+                        </p>
+                        <p>
+                            MAX:{" "}
+                            <span>
+                                {Math.max.apply(
+                                    null,
+                                    stockDetails.map((item) => item.price)
+                                )}
+                            </span>
+                        </p>
+                        <p>
+                            AVG: <span>{getAverage(stockDetails)}</span>
+                        </p>
+                    </div>
+                </>
+            ) : (
+                <div>No stocks data available!</div>
             )}
         </div>
     );
